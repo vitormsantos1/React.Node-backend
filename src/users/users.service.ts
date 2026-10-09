@@ -1,4 +1,5 @@
-﻿import { ConflictException, Injectable } from '@nestjs/common';
+﻿/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { ConflictException, Injectable } from '@nestjs/common';
 import { hash } from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { CreateUserDto } from './dto/create-user.dto';
