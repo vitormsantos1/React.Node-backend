@@ -27,4 +27,8 @@ export class UsersService {
       excludeExtraneousValues: true,
     });
   }
+
+  async getUsers() {
+    return await this.usersRepository.getAllUsers();
+  }
 }

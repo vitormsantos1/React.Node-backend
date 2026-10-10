@@ -19,7 +19,7 @@ export class AuthGuard implements CanActivate {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const authorization = this.extractTokenFromHeader(request);
     if (!authorization) {
-      throw new UnauthorizedException();
+      throw new UnauthorizedException('exception 1');
     }
     try {
       const payload = this.jwtService.verify(authorization, {secret: process.env.JWT_SECRET});
