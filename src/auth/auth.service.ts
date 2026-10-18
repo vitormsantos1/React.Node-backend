@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { CreateUserDto } from '../users/dto/create-user.dto';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +37,26 @@ export class AuthService {
 
     const accessToken = this.jwtService.sign(payload);
 
-    return { accessToken };
+    return { access_token: accessToken, };
+  }
+
+  async registrar(dadosCadastro: CreateUserDto) {
+    const senhaCriptografada = await bcrypt.hash(dadosCadastro.password, 10);
+
+    const novoUsuario = await this.prisma.user.create({
+      data: {
+        name: dadosCadastro.name,
+        email: dadosCadastro.email,
+        password: senhaCriptografada,
+      },
+    });
+
+    const { password, ...usuarioSemSenha } = novoUsuario;
+    return usuarioSemSenha;
+  }
+
+  async recuperarSenha(email: string) {
+    return { mensagem: 'Instruções enviadas para o e-mail informado.' };
   }
 }
+
