@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Request } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ApiConflictResponse, ApiResponseProperty } from '@nestjs/swagger';
@@ -19,5 +19,13 @@ export class UsersController {
   @Get()
   getUsers() {
     return this.usersService.getUsers();
+  }
+  @UseGuards(AuthGuard)
+  @Get('meu-perfil')
+  buscarPerfil(@Request() req) {
+    return {
+      mensagem: 'Acesso autorizado ao perfil',
+      perfil: req.user,
+    };
   }
 }
