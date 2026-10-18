@@ -1,5 +1,5 @@
 ﻿/* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { hash } from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -30,5 +30,17 @@ export class UsersService {
 
   async getUsers() {
     return await this.usersRepository.getAllUsers();
+  }
+
+  async findOne(id: number) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    return plainToInstance(ResponseUserDto, user, {
+      excludeExtraneousValues: true,
+    });
   }
 }
