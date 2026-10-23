@@ -1,4 +1,4 @@
-﻿import { ConflictException, Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { hash } from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -16,11 +16,15 @@ export class UsersService {
       throw new ConflictException('Já existe um usuário com este e-mail');
     }
 
-    const hashedPassword = await hash(data.password, 10);
+    const hashedPassword = await hash(data.password, 12);
     const user = await this.usersRepository.create({
       ...data,
       password: hashedPassword,
     });
+
+    if (!user) {
+      throw new ConflictException('Já existe um usuário com este e-mail');
+    }
 
     return plainToInstance(ResponseUserDto, user, {
       excludeExtraneousValues: true,
