@@ -1,4 +1,5 @@
 ﻿/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+// eslint-disable-next-line prettier/prettier
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { hash } from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
@@ -32,7 +33,7 @@ export class UsersService {
     return await this.usersRepository.getAllUsers();
   }
 
-  async findOne(id: number) {
+  async findOne(id: string) {
     const user = await this.usersRepository.findById(id);
 
     if (!user) {

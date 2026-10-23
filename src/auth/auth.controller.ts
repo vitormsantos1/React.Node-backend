@@ -3,11 +3,9 @@ import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 
-
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-  
   @Post('cadastro')
   async criarConta(@Body() dadosCadastro: CreateUserDto) {
     return await this.authService.registrar(dadosCadastro);
@@ -15,7 +13,7 @@ export class AuthController {
 
   @Post('login')
   async fazerlogin(@Body() credenciais: LoginDto) {
-    return await this.authService.login(credenciais);
+    return await this.authService.validarAcesso(credenciais);
   }
 
   @Post('esqueci-minha-senha')

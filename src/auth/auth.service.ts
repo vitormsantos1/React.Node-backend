@@ -37,7 +37,7 @@ export class AuthService {
     };
     const accessToken = this.jwtService.sign(payload);
 
-    return { access_token: accessToken, };
+    return { access_token: accessToken };
   }
 
   async registrar(dadosCadastro: CreateUserDto) {
@@ -51,12 +51,13 @@ export class AuthService {
       },
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password, ...usuarioSemSenha } = novoUsuario;
     return usuarioSemSenha;
   }
 
+  // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-unused-vars
   async recuperarSenha(email: string) {
     return { mensagem: 'Instruções enviadas para o e-mail informado.' };
   }
 }
-
