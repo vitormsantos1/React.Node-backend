@@ -1,20 +1,20 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { AuthRepository } from './auth.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly authRepository: AuthRepository,
     private readonly jwtService: JwtService,
   ) {}
 
   async validarAcesso(credenciais: LoginDto) {
-    const usuario = await this.prisma.user.findUnique({
-      where: { email: credenciais.email },
-    });
+    const usuario = await this.authRepository.findUserByEmail(
+      credenciais.email,
+    );
 
     if (!usuario) {
       throw new UnauthorizedException('e-mail e/ou senha incorretos.');
@@ -32,10 +32,11 @@ export class AuthService {
     const payload = {
       sub: usuario.id,
       email: usuario.email,
+      role: usuario.role,
     };
 
     const accessToken = this.jwtService.sign(payload);
 
-    return { accessToken };
+    return { access_token: accessToken };
   }
 }

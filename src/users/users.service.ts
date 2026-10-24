@@ -1,4 +1,6 @@
-﻿import { ConflictException, Injectable } from '@nestjs/common';
+﻿/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+// eslint-disable-next-line prettier/prettier
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { hash } from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -21,6 +23,22 @@ export class UsersService {
       ...data,
       password: hashedPassword,
     });
+
+    return plainToInstance(ResponseUserDto, user, {
+      excludeExtraneousValues: true,
+    });
+  }
+
+  async getUsers() {
+    return await this.usersRepository.getAllUsers();
+  }
+
+  async findOne(id: string) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
 
     return plainToInstance(ResponseUserDto, user, {
       excludeExtraneousValues: true,
