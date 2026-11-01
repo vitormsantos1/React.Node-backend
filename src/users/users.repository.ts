@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
@@ -8,6 +8,17 @@ export class UsersRepository {
 
   findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id } });
+  }
+
+  async updatePassword(id: string, password: string) {
+    return this.prisma.user.update({
+      where: { id },
+      data: { password },
+    });
   }
 
   async create(data: Prisma.UserCreateInput) {
