@@ -1,9 +1,13 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
+
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { UsersModule } from 'src/users/users.module';
+import { JwtStrategy } from 'src/auth/strategy/jwt.strategy';
+
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AuthRepository } from './auth.repository';
 import { PasswordResetTokenRepository } from './password-reset-token.repository';
 
 @Module({
@@ -18,6 +22,11 @@ import { PasswordResetTokenRepository } from './password-reset-token.repository'
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, PasswordResetTokenRepository],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    AuthRepository,
+    PasswordResetTokenRepository,
+  ],
 })
 export class AuthModule {}

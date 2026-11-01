@@ -26,4 +26,12 @@ export class UsersRepository {
       data,
     });
   }
+
+  async getAllUsers() {
+    return this.prisma.user.findMany();
+  }
+
+  async findById(id: string) {
+    return this.prisma.user.findUnique({ where: { id: id } });
+  }
 }

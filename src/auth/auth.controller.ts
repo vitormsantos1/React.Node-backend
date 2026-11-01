@@ -9,14 +9,13 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
-
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Realiza login na aplicação' })
   @ApiResponse({ status: 200, description: 'Login realizado com sucesso' })
   @ApiResponse({ status: 401, description: 'Credenciais inválidas' })
   async fazerlogin(@Body() credenciais: LoginDto) {
-    return this.authService.validarAcesso(credenciais);
+    return await this.authService.validarAcesso(credenciais);
   }
 
   @Post('forgot-password')
