@@ -13,6 +13,7 @@ import { PasswordResetTokenRepository } from './password-reset-token.repository'
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UsersRepository } from 'src/users/users.repository';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,7 @@ export class AuthService {
     private readonly authRepository: AuthRepository,
     private readonly passwordResetTokenRepository: PasswordResetTokenRepository,
     private readonly jwtService: JwtService,
+    private readonly userRepository: UsersRepository,
   ) {}
 
   async validarAcesso(credenciais: LoginDto) {
@@ -93,10 +95,7 @@ export class AuthService {
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    await this.authRepository.updateUserPassword(
-      resetToken.userId,
-      hashedPassword,
-    );
+    await this.userRepository.updatePassword(resetToken.userId, hashedPassword);
 
     await this.passwordResetTokenRepository.markAsUsed(resetToken.id);
 
