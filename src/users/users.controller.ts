@@ -1,12 +1,18 @@
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { ApiConflictResponse, ApiResponseProperty } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConflictResponse,
+  ApiResponseProperty,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 import { Role } from '@prisma/client';
 import { Roles } from 'src/auth/decorator/roles.decorator';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 
+@ApiTags('Usuários')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -19,7 +25,8 @@ export class UsersController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.USER)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
   @Get()
   getUsers() {
     return this.usersService.getUsers();
