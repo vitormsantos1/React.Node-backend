@@ -19,7 +19,7 @@ async function bootstrap() {
   );
 
   const config = new DocumentBuilder()
-    .setTitle('API Divisor de Contas')
+    .setTitle('API vet')
     .setDescription('Documentação dos endpoints da aplicação')
     .setVersion('1.0')
     .addBearerAuth()
