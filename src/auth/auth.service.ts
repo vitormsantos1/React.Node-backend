@@ -2,10 +2,11 @@ import {
   BadRequestException,
   Injectable,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 
 import { AuthRepository } from './auth.repository';
 import { PasswordResetTokenRepository } from './password-reset-token.repository';
@@ -14,14 +15,18 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UsersRepository } from 'src/users/users.repository';
+import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly passwordResetTokenRepository: PasswordResetTokenRepository,
     private readonly jwtService: JwtService,
     private readonly userRepository: UsersRepository,
+    private readonly mailService: MailService,
   ) {}
 
   async validarAcesso(credenciais: LoginDto) {
@@ -65,18 +70,20 @@ export class AuthService {
 
     await this.passwordResetTokenRepository.invalidateUserTokens(usuario.id);
 
-    const token = randomBytes(32).toString('hex');
+    const code = randomInt(100000, 1000000).toString();
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     await this.passwordResetTokenRepository.create({
-      token,
+      token: code,
       userId: usuario.id,
       expiresAt,
     });
 
-    console.log(
-      `[SIMULAÇÃO DE E-MAIL] Para: ${usuario.email} | Token de recuperação: ${token}`,
-    );
+    try {
+      await this.mailService.sendPasswordRecoveryEmail(dto.email, code);
+    } catch {
+      this.logger.error('Falha ao enviar e-mail de recuperação de senha.');
+    }
 
     return {
       message:
