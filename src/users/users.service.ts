@@ -1,4 +1,4 @@
-import {
+﻿import {
   ConflictException,
   Injectable,
   NotFoundException,
@@ -10,6 +10,7 @@ import { plainToInstance } from 'class-transformer';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ResponseUserDto } from './dto/response-user.dto';
 import { UsersRepository } from './users.repository';
+import { updateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UsersService {
@@ -35,6 +36,14 @@ export class UsersService {
     return plainToInstance(ResponseUserDto, user, {
       excludeExtraneousValues: true,
     });
+  }
+
+  async updateUser(id: string, data: updateUserDto) {
+    if (!(await this.usersRepository.findById(id))) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    return await this.usersRepository.update(id, data);
   }
 
   async getUsers() {
