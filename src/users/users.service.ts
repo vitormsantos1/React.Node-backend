@@ -42,8 +42,10 @@ export class UsersService {
     if (!(await this.usersRepository.findById(id))) {
       throw new NotFoundException('Usuário não encontrado');
     }
-
-    return await this.usersRepository.update(id, data);
+    const newUser = await this.usersRepository.update(id, data);
+    return plainToInstance(ResponseUserDto, newUser, {
+      excludeExtraneousValues: true,
+    });
   }
 
   async getUsers() {
