@@ -1,4 +1,4 @@
-﻿import { ConflictException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { hash } from 'bcrypt';
 import { UsersRepository } from './users.repository';
@@ -13,7 +13,11 @@ const hashMock = hash as unknown as jest.Mock<
 
 describe('UsersService', () => {
   let service: UsersService;
-  const repository = { findByEmail: jest.fn(), create: jest.fn() };
+  const repository = {
+    findByEmail: jest.fn(),
+    findById: jest.fn(),
+    create: jest.fn(),
+  };
   const data = { name: 'Teste', email: 'teste@example.com', password: 'senha' };
   const user = { ...data, id: 'user-id', role: 'USER', password: 'hashed' };
 
@@ -84,5 +88,30 @@ describe('UsersService', () => {
     await expect(service.create(data)).rejects.toBe(error);
     expect(hashMock).not.toHaveBeenCalled();
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  describe('findOne', () => {
+    it('retorna os campos públicos do usuário encontrado', async () => {
+      repository.findById.mockResolvedValue(user);
+
+      const result = await service.findOne(user.id);
+
+      expect(repository.findById).toHaveBeenCalledWith(user.id);
+      expect({ ...result }).toEqual({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      });
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('lança NotFoundException quando o usuário não existe', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(service.findOne('missing-user')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+    });
   });
 });

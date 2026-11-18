@@ -51,4 +51,13 @@ export class UsersController {
   getUsers() {
     return this.usersService.getUsers();
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @Get(':id')
+  @ApiNotFoundResponse({ description: 'Usuário não encontrado' })
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(id);
+  }
 }
