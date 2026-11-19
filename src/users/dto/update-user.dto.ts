@@ -1,20 +1,6 @@
 /* eslint-disable prettier/prettier */
-import { ApiProperty} from "@nestjs/swagger";
-import { Expose } from "class-transformer";
-import { Role } from "@prisma/client";
-import { IsEnum, IsOptional, IsString } from "class-validator";
+import { PartialType } from "@nestjs/swagger";
+import { CreateUserDto } from "./create-user.dto";
 
-export class updateUserDto {
-    
-      @ApiProperty()
-      @Expose()
-      @IsString()
-      @IsOptional()
-      name!: string;
-    
-      @ApiProperty({ enum: Role })
-      @Expose()
-      @IsEnum(Role)
-      @IsOptional()
-      role!: Role;
+export class updateUserDto extends PartialType(CreateUserDto) { 
 }

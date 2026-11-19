@@ -18,9 +18,16 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { updateUserDto } from './dto/update-user.dto';
+
+export interface UserPayload {
+  id: string;
+  email: string;
+  role: string;
+}
 
 @ApiTags('Usuários')
 @Controller('users')
@@ -38,10 +45,13 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiResponseProperty()
   @ApiNotFoundResponse({ description: 'Usuário não encontrado' })
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
-  updateUser(@Param('id') id: string, @Body() updateUserDto: updateUserDto) {
-    return this.usersService.updateUser(id, updateUserDto);
+  @UseGuards(JwtAuthGuard)
+  updateUser(
+    @Req() req: Request & { user: UserPayload },
+    @Param('id') id: string,
+    @Body() updateUserDto: updateUserDto,
+  ) {
+    return this.usersService.updateUser(id, updateUserDto, req.user);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
