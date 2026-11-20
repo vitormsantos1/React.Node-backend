@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { StringValue } from 'ms';
 import { UsersRepository } from 'src/users/users.repository';
 
-interface JwtPayload {
+export interface JwtPayload {
   sub: string;
   email: string;
   role: string;

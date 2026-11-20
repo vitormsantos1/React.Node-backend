@@ -1,8 +1,14 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { hash } from 'bcrypt';
 import { UsersRepository } from './users.repository';
 import { UsersService } from './users.service';
+import { UserPayload } from './users.controller';
+import { Role } from '@prisma/client';
 
 jest.mock('bcrypt', () => ({ hash: jest.fn() }));
 
@@ -19,9 +25,14 @@ describe('UsersService', () => {
     create: jest.fn(),
     update: jest.fn(),
     getAllUsers: jest.fn(),
+    remove: jest.fn(),
   };
   const data = { name: 'Teste', email: 'teste@example.com', password: 'senha' };
   const user = { ...data, id: 'user-id', role: 'USER', password: 'hashed' };
+
+  const ownerPayload = { id: user.id, role: Role.USER } as UserPayload;
+  const otherPayload = { id: 'other-id', role: Role.USER } as UserPayload;
+  const adminPayload = { id: 'admin-id', role: Role.ADMIN } as UserPayload;
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -93,27 +104,82 @@ describe('UsersService', () => {
   });
 
   describe('findOne', () => {
-    it('retorna os campos públicos do usuário encontrado', async () => {
+    const publicUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    it('retorna os campos públicos quando o usuário busca a si mesmo', async () => {
       repository.findById.mockResolvedValue(user);
 
-      const result = await service.findOne(user.id);
+      const result = await service.findOne(user.id, ownerPayload);
 
       expect(repository.findById).toHaveBeenCalledWith(user.id);
-      expect({ ...result }).toEqual({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      });
+      expect({ ...result }).toEqual(publicUser);
       expect(result).not.toHaveProperty('password');
     });
 
-    it('lança NotFoundException quando o usuário não existe', async () => {
+    it('permite que um admin busque outro usuário', async () => {
+      repository.findById.mockResolvedValue(user);
+
+      const result = await service.findOne(user.id, adminPayload);
+
+      expect({ ...result }).toEqual(publicUser);
+    });
+
+    it('rejeita quando um usuário comum busca outro usuário', async () => {
+      repository.findById.mockResolvedValue(user);
+
+      await expect(
+        service.findOne(user.id, otherPayload),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    });
+
+    it('lança NotFoundException sem chamar update quando o usuário não existe', async () => {
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.findOne('missing-user')).rejects.toBeInstanceOf(
-        NotFoundException,
-      );
+      await expect(
+        service.findOne('missing-user', adminPayload),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+  });
+
+  describe('remove', () => {
+    it('remove o próprio usuário', async () => {
+      repository.findById.mockResolvedValue(user);
+
+      const result = await service.remove(user.id, ownerPayload);
+
+      expect(repository.remove).toHaveBeenCalledWith(user.id);
+      expect(result).toEqual({ message: 'Usuário removido com sucesso' });
+    });
+
+    it('permite que um admin remova outro usuário', async () => {
+      repository.findById.mockResolvedValue(user);
+
+      await service.remove(user.id, adminPayload);
+
+      expect(repository.remove).toHaveBeenCalledWith(user.id);
+    });
+
+    it('não remove quando um usuário comum tenta remover outro', async () => {
+      repository.findById.mockResolvedValue(user);
+
+      await expect(
+        service.remove(user.id, otherPayload),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+      expect(repository.remove).not.toHaveBeenCalled();
+    });
+
+    it('não remove quando o usuário não existe', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(
+        service.remove('missing-user', adminPayload),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(repository.remove).not.toHaveBeenCalled();
     });
   });
 
