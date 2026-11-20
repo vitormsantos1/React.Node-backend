@@ -17,6 +17,8 @@ describe('UsersService', () => {
     findByEmail: jest.fn(),
     findById: jest.fn(),
     create: jest.fn(),
+    update: jest.fn(),
+    getAllUsers: jest.fn(),
   };
   const data = { name: 'Teste', email: 'teste@example.com', password: 'senha' };
   const user = { ...data, id: 'user-id', role: 'USER', password: 'hashed' };
@@ -112,6 +114,56 @@ describe('UsersService', () => {
       await expect(service.findOne('missing-user')).rejects.toBeInstanceOf(
         NotFoundException,
       );
+    });
+  });
+
+  describe('updateUser', () => {
+    const updateData = { name: 'Nome Atualizado' };
+
+    it('atualiza o usuário e retorna apenas os campos públicos', async () => {
+      repository.findById.mockResolvedValue(user);
+      repository.update.mockResolvedValue({ ...user, ...updateData });
+
+      const result = await service.updateUser(user.id, updateData);
+
+      expect(repository.findById).toHaveBeenCalledWith(user.id);
+      expect(repository.update).toHaveBeenCalledWith(user.id, updateData);
+      expect({ ...result }).toEqual({
+        id: user.id,
+        name: updateData.name,
+        email: user.email,
+        role: user.role,
+      });
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('lança NotFoundException sem chamar update quando o usuário não existe', async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(
+        service.updateUser('missing-user', updateData),
+      ).rejects.toBeInstanceOf(NotFoundException);
+
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
+    it('propaga erros de persistência ao atualizar', async () => {
+      const error = new Error('Falha ao atualizar');
+      repository.findById.mockResolvedValue(user);
+      repository.update.mockRejectedValue(error);
+
+      await expect(service.updateUser(user.id, updateData)).rejects.toBe(error);
+    });
+  });
+
+  describe('getUsers', () => {
+    it('retorna todos os usuários do repositório', async () => {
+      repository.getAllUsers.mockResolvedValue([user]);
+
+      const result = await service.getUsers();
+
+      expect(repository.getAllUsers).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([user]);
     });
   });
 });

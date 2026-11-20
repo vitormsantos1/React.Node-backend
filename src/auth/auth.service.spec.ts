@@ -1,8 +1,14 @@
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import {
+  BadRequestException,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+import { MailService } from 'src/mail/mail.service';
 import { UsersRepository } from 'src/users/users.repository';
+import { AuthRepository } from './auth.repository';
 import { AuthService } from './auth.service';
 import { PasswordResetTokenRepository } from './password-reset-token.repository';
 
@@ -17,14 +23,11 @@ jest.mock('bcrypt', () => ({
   hash: jest.fn(),
 }));
 
-import { JwtService } from '@nestjs/jwt';
-
 describe('AuthService', () => {
   let service: AuthService;
 
-  const usersRepository = {
-    findByEmail: jest.fn(),
-    updatePassword: jest.fn(),
+  const authRepository = {
+    findUserByEmail: jest.fn(),
   };
 
   const passwordResetTokenRepository = {
@@ -38,6 +41,14 @@ describe('AuthService', () => {
     sign: jest.fn(),
   };
 
+  const usersRepository = {
+    updatePassword: jest.fn(),
+  };
+
+  const mailService = {
+    sendPasswordRecoveryEmail: jest.fn(),
+  };
+
   const mockUser = {
     id: 'user-id-123',
     name: 'Teste',
@@ -47,17 +58,19 @@ describe('AuthService', () => {
   };
 
   beforeEach(async () => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
 
     const module = await Test.createTestingModule({
       providers: [
         AuthService,
-        { provide: UsersRepository, useValue: usersRepository },
+        { provide: AuthRepository, useValue: authRepository },
         {
           provide: PasswordResetTokenRepository,
           useValue: passwordResetTokenRepository,
         },
         { provide: JwtService, useValue: jwtService },
+        { provide: UsersRepository, useValue: usersRepository },
+        { provide: MailService, useValue: mailService },
       ],
     }).compile();
 
@@ -65,8 +78,8 @@ describe('AuthService', () => {
   });
 
   describe('validarAcesso', () => {
-    it('deve autenticar com sucesso e retornar accessToken', async () => {
-      usersRepository.findByEmail.mockResolvedValue(mockUser);
+    it('deve autenticar com sucesso e retornar access_token', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       jwtService.sign.mockReturnValue('mock-jwt-token');
 
@@ -75,7 +88,9 @@ describe('AuthService', () => {
         password: 'senhaCorreta',
       });
 
-      expect(usersRepository.findByEmail).toHaveBeenCalledWith(mockUser.email);
+      expect(authRepository.findUserByEmail).toHaveBeenCalledWith(
+        mockUser.email,
+      );
       expect(bcrypt.compare).toHaveBeenCalledWith(
         'senhaCorreta',
         mockUser.password,
@@ -83,12 +98,13 @@ describe('AuthService', () => {
       expect(jwtService.sign).toHaveBeenCalledWith({
         sub: mockUser.id,
         email: mockUser.email,
+        role: mockUser.role,
       });
-      expect(result).toEqual({ accessToken: 'mock-jwt-token' });
+      expect(result).toEqual({ access_token: 'mock-jwt-token' });
     });
 
     it('deve lançar UnauthorizedException se o e-mail não existir', async () => {
-      usersRepository.findByEmail.mockResolvedValue(null);
+      authRepository.findUserByEmail.mockResolvedValue(null);
 
       await expect(
         service.validarAcesso({
@@ -101,7 +117,7 @@ describe('AuthService', () => {
     });
 
     it('deve lançar UnauthorizedException se a senha for incorreta', async () => {
-      usersRepository.findByEmail.mockResolvedValue(mockUser);
+      authRepository.findUserByEmail.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(
@@ -117,7 +133,7 @@ describe('AuthService', () => {
 
   describe('solicitarRecuperacaoSenha', () => {
     it('deve responder com sucesso mesmo se o usuário não for encontrado (anti-enumeração)', async () => {
-      usersRepository.findByEmail.mockResolvedValue(null);
+      authRepository.findUserByEmail.mockResolvedValue(null);
 
       const result = await service.solicitarRecuperacaoSenha({
         email: 'inexistente@example.com',
@@ -131,22 +147,22 @@ describe('AuthService', () => {
         passwordResetTokenRepository.invalidateUserTokens,
       ).not.toHaveBeenCalled();
       expect(passwordResetTokenRepository.create).not.toHaveBeenCalled();
+      expect(mailService.sendPasswordRecoveryEmail).not.toHaveBeenCalled();
     });
 
-    it('deve invalidar tokens anteriores, criar novo token e retornar mensagem de sucesso', async () => {
-      usersRepository.findByEmail.mockResolvedValue(mockUser);
+    it('deve invalidar tokens anteriores, criar código de 6 dígitos e enviar e-mail', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(mockUser);
       passwordResetTokenRepository.invalidateUserTokens.mockResolvedValue({
         count: 1,
       });
       passwordResetTokenRepository.create.mockResolvedValue({
         id: 'token-id-1',
-        token: 'token-gerado',
+        token: '123456',
         userId: mockUser.id,
         expiresAt: new Date(),
         used: false,
       });
-
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      mailService.sendPasswordRecoveryEmail.mockResolvedValue(undefined);
 
       const result = await service.solicitarRecuperacaoSenha({
         email: mockUser.email,
@@ -156,21 +172,50 @@ describe('AuthService', () => {
         passwordResetTokenRepository.invalidateUserTokens,
       ).toHaveBeenCalledWith(mockUser.id);
       expect(passwordResetTokenRepository.create).toHaveBeenCalledTimes(1);
-      const lastCall = passwordResetTokenRepository.create.mock.calls[0] as [
-        { userId: string; token: string; expiresAt: Date },
-      ];
-      expect(lastCall[0].userId).toBe(mockUser.id);
-      expect(typeof lastCall[0].token).toBe('string');
-      expect(lastCall[0].expiresAt).toBeInstanceOf(Date);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[SIMULAÇÃO DE E-MAIL]'),
+
+      const [createdPayload] = passwordResetTokenRepository.create.mock
+        .calls[0] as [{ userId: string; token: string; expiresAt: Date }];
+      expect(createdPayload.userId).toBe(mockUser.id);
+      expect(createdPayload.token).toMatch(/^\d{6}$/);
+      expect(createdPayload.expiresAt).toBeInstanceOf(Date);
+
+      expect(mailService.sendPasswordRecoveryEmail).toHaveBeenCalledWith(
+        mockUser.email,
+        createdPayload.token,
+      );
+      expect(result).toEqual({
+        message:
+          'Se o e-mail informado estiver cadastrado, você receberá as instruções para recuperação de senha.',
+      });
+    });
+
+    it('deve registrar erro no logger mas manter a resposta genérica se o envio de e-mail falhar', async () => {
+      authRepository.findUserByEmail.mockResolvedValue(mockUser);
+      passwordResetTokenRepository.invalidateUserTokens.mockResolvedValue({
+        count: 0,
+      });
+      passwordResetTokenRepository.create.mockResolvedValue({});
+      mailService.sendPasswordRecoveryEmail.mockRejectedValue(
+        new Error('Falha no Mailjet'),
+      );
+
+      const loggerSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
+
+      const result = await service.solicitarRecuperacaoSenha({
+        email: mockUser.email,
+      });
+
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Falha ao enviar e-mail de recuperação de senha.',
       );
       expect(result).toEqual({
         message:
           'Se o e-mail informado estiver cadastrado, você receberá as instruções para recuperação de senha.',
       });
 
-      consoleSpy.mockRestore();
+      loggerSpy.mockRestore();
     });
   });
 
@@ -209,7 +254,7 @@ describe('AuthService', () => {
         token: 'token-expirado',
         userId: 'user-id-123',
         used: false,
-        expiresAt: new Date(Date.now() - 60000), // expirou 1 min atrás
+        expiresAt: new Date(Date.now() - 60000),
       });
 
       await expect(
