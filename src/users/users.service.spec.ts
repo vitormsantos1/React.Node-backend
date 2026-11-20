@@ -186,11 +186,15 @@ describe('UsersService', () => {
   describe('updateUser', () => {
     const updateData = { name: 'Nome Atualizado' };
 
-    it('atualiza o usuário e retorna apenas os campos públicos', async () => {
+    it('atualiza o próprio usuário e retorna apenas os campos públicos', async () => {
       repository.findById.mockResolvedValue(user);
       repository.update.mockResolvedValue({ ...user, ...updateData });
 
-      const result = await service.updateUser(user.id, updateData);
+      const result = await service.updateUser(
+        user.id,
+        updateData,
+        ownerPayload,
+      );
 
       expect(repository.findById).toHaveBeenCalledWith(user.id);
       expect(repository.update).toHaveBeenCalledWith(user.id, updateData);
@@ -203,11 +207,40 @@ describe('UsersService', () => {
       expect(result).not.toHaveProperty('password');
     });
 
+    it('permite que um admin atualize outro usuário', async () => {
+      repository.findById.mockResolvedValue(user);
+      repository.update.mockResolvedValue({ ...user, ...updateData });
+
+      const result = await service.updateUser(
+        user.id,
+        updateData,
+        adminPayload,
+      );
+
+      expect(repository.update).toHaveBeenCalledWith(user.id, updateData);
+      expect({ ...result }).toEqual({
+        id: user.id,
+        name: updateData.name,
+        email: user.email,
+        role: user.role,
+      });
+    });
+
+    it('lança UnauthorizedException sem chamar update quando um usuário comum tenta atualizar outro', async () => {
+      repository.findById.mockResolvedValue(user);
+
+      await expect(
+        service.updateUser(user.id, updateData, otherPayload),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+
+      expect(repository.update).not.toHaveBeenCalled();
+    });
+
     it('lança NotFoundException sem chamar update quando o usuário não existe', async () => {
       repository.findById.mockResolvedValue(null);
 
       await expect(
-        service.updateUser('missing-user', updateData),
+        service.updateUser('missing-user', updateData, adminPayload),
       ).rejects.toBeInstanceOf(NotFoundException);
 
       expect(repository.update).not.toHaveBeenCalled();
@@ -218,7 +251,9 @@ describe('UsersService', () => {
       repository.findById.mockResolvedValue(user);
       repository.update.mockRejectedValue(error);
 
-      await expect(service.updateUser(user.id, updateData)).rejects.toBe(error);
+      await expect(
+        service.updateUser(user.id, updateData, ownerPayload),
+      ).rejects.toBe(error);
     });
   });
 
