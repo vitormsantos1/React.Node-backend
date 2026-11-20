@@ -43,13 +43,17 @@ export class UsersService {
 
   async updateUser(id: string, data: updateUserDto, payload: UserPayload) {
     const user = await this.usersRepository.findById(id);
+
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
     }
+
     if (id !== payload.id && payload.role !== Role.ADMIN) {
       throw new UnauthorizedException('usuário não autorizado');
     }
+
     const newUser = await this.usersRepository.update(id, data);
+
     return plainToInstance(ResponseUserDto, newUser, {
       excludeExtraneousValues: true,
     });
@@ -59,8 +63,16 @@ export class UsersService {
     return await this.usersRepository.getAllUsers();
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, payload: UserPayload) {
     const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    if (id !== payload.id && payload.role !== Role.ADMIN) {
+      throw new UnauthorizedException('usuário não autorizado');
+    }
 
     if (!user) {
       throw new NotFoundException('Usuário não encontrado');
@@ -69,5 +81,21 @@ export class UsersService {
     return plainToInstance(ResponseUserDto, user, {
       excludeExtraneousValues: true,
     });
+  }
+
+  async remove(id: string, payload: UserPayload) {
+    const user = await this.usersRepository.findById(id);
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    if (id !== payload.id && payload.role !== Role.ADMIN) {
+      throw new UnauthorizedException('usuário não autorizado');
+    }
+
+    await this.usersRepository.remove(id);
+
+    return { message: 'Usuário removido com sucesso' };
   }
 }

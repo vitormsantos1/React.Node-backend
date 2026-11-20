@@ -6,6 +6,7 @@ import {
   ApiNotFoundResponse,
   ApiResponseProperty,
   ApiTags,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/auth.guard';
 import { Role } from '@prisma/client';
@@ -14,6 +15,7 @@ import { RolesGuard } from 'src/auth/guards/roles.guard';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -45,6 +47,7 @@ export class UsersController {
   @ApiBearerAuth()
   @ApiResponseProperty()
   @ApiNotFoundResponse({ description: 'Usuário não encontrado' })
+  @ApiUnauthorizedResponse({ description: 'Usuário não autorizado' })
   @UseGuards(JwtAuthGuard)
   updateUser(
     @Req() req: Request & { user: UserPayload },
@@ -62,12 +65,25 @@ export class UsersController {
     return this.usersService.getUsers();
   }
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.ADMIN)
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Get(':id')
   @ApiNotFoundResponse({ description: 'Usuário não encontrado' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  @ApiUnauthorizedResponse({ description: 'Usuário não autorizado' })
+  findOne(
+    @Req() req: Request & { user: UserPayload },
+    @Param('id') id: string,
+  ) {
+    return this.usersService.findOne(id, req.user);
+  }
+
+  @Delete(':id')
+  @ApiBearerAuth()
+  @ApiResponseProperty()
+  @ApiNotFoundResponse({ description: 'Usuário não encontrado' })
+  @ApiUnauthorizedResponse({ description: 'Usuário não autorizado' })
+  @UseGuards(JwtAuthGuard)
+  remove(@Req() req: Request & { user: UserPayload }, @Param('id') id: string) {
+    return this.usersService.remove(id, req.user);
   }
 }

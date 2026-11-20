@@ -34,4 +34,12 @@ export class UsersRepository {
   async getAllUsers() {
     return this.prisma.user.findMany();
   }
+
+  async remove(id: string) {
+    return this.prisma.user.delete({
+      where: {
+        id: id,
+      },
+    });
+  }
 }
