@@ -1,9 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { JwtAuthGuard } from './guards/auth.guard';
+
 
 @ApiTags('auth')
 @Controller('auth')
@@ -39,4 +41,18 @@ export class AuthController {
   async redefinirSenha(@Body() dto: ResetPasswordDto) {
     return this.authService.redefinirSenha(dto);
   }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+ logout(@Req() req: { user: { id: string } }) {
+  return this.authService.logout(req.user.id);
+}
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  refreshTokens(@Body() dto: { refreshToken: string }) {
+    return this.authService.refreshTokens(dto.refreshToken);
+  }
+
 }

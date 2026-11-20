@@ -47,15 +47,11 @@ export class AuthService {
       throw new UnauthorizedException('E-mail e/ou senha incorretos.');
     }
 
-    const payload = {
-      sub: usuario.id,
+    return this.emitirTokens({
+      id: usuario.id,
       email: usuario.email,
       role: usuario.role,
-    };
-
-    const accessToken = this.jwtService.sign(payload);
-
-    return { access_token: accessToken };
+    });
   }
 
   async solicitarRecuperacaoSenha(dto: ForgotPasswordDto) {
@@ -110,4 +106,77 @@ export class AuthService {
       message: 'Senha redefinida com sucesso.',
     };
   }
+
+
+  private async emitirTokens(user: {
+    id: string;
+    email: string;
+    role: string;
+  }) {
+    const payload = {
+    sub: user.id,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = await this.jwtService.signAsync(payload, {
+    expiresIn: '15m',
+  });
+
+  const refreshToken = await this.jwtService.signAsync(payload, {
+    secret: process.env.JWT_REFRESH_SECRET,
+    expiresIn: '7d',
+  });
+
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+  await this.userRepository.updateRefreshToken(
+    user.id,
+    hashedRefreshToken,
+  );
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  };
+  }
+
+
+  async logout(userId : string) {
+        const usuario = await this.authRepository.findUserByEmail(userId);
+    await this.userRepository.updateRefreshToken(userId, null);
+    return { message: 'Logout realizado com sucesso.' };
+  }
+
+
+async refreshTokens(refreshToken: string) {
+  if (!refreshToken) {
+    throw new UnauthorizedException('Refresh token inválido.');
+  }
+
+  let payload: { sub: string; email: string; role: string };
+
+  try {
+    payload = await this.jwtService.verifyAsync(refreshToken, {
+      secret: process.env.JWT_REFRESH_SECRET,
+    });
+  } catch {
+    throw new UnauthorizedException('Refresh token inválido ou expirado.');
+  }
+
+  const user = await this.userRepository.findByEmail(payload.email);
+
+  if (
+    !user?.hashedRefreshToken ||
+    !(await bcrypt.compare(refreshToken, user.hashedRefreshToken))
+  ) {
+    throw new UnauthorizedException('Refresh token inválido ou revogado.');
+  }
+
+  return this.emitirTokens({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+  });
+}
+
 }
