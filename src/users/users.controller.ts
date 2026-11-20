@@ -36,6 +36,14 @@ export interface UserPayload {
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  me(@Req() req: Request & { user: UserPayload }) {
+    const { id, email, role } = req.user;
+    return { id, email, role };
+  }
+
   @Post()
   @ApiResponseProperty()
   @ApiConflictResponse({ description: 'Já existe um usuário com este e-mail' })
