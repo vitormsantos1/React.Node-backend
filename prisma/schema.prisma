@@ -23,6 +23,7 @@ model User {
   password            String
   role                Role                 @default(USER)
   passwordResetTokens PasswordResetToken[]
+  hashedRefreshToken    String?
 }
 
 model PasswordResetToken {
