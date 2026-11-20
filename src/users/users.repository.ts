@@ -42,4 +42,12 @@ export class UsersRepository {
       },
     });
   }
+
+  async updateRefreshToken(userId: string, hashedRefreshToken: string | null) {
+  return this.prisma.user.update({
+    where: { id: userId },
+    data: { hashedRefreshToken },
+  });
+}
+
 }
