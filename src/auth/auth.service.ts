@@ -71,7 +71,7 @@ export class AuthService {
     await this.passwordResetTokenRepository.invalidateUserTokens(usuario.id);
 
     const code = randomInt(100000, 1000000).toString();
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000);
 
     await this.passwordResetTokenRepository.create({
       token: code,
