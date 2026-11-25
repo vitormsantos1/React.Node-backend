@@ -3,8 +3,8 @@ import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class ResetPasswordDto {
   @ApiProperty({
-    description: 'Token recebido para redefinição de senha',
-    example: 'd9b7f5e8c1a243b68f9e1234567890abcdef',
+    description: 'Código recebido para redefinição de senha',
+    example: '123456',
   })
   @IsString({ message: 'O token deve ser uma string' })
   @IsNotEmpty({ message: 'O token não pode estar vazio' })
