@@ -142,7 +142,6 @@ export class AuthService {
 
 
   async logout(userId : string) {
-        const usuario = await this.authRepository.findUserByEmail(userId);
     await this.userRepository.updateRefreshToken(userId, null);
     return { message: 'Logout realizado com sucesso.' };
   }
