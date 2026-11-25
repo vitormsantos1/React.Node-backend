@@ -1,12 +1,24 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags, ApiBearerAuth} from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { LoginDto } from './dto/login.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { RefreshTokenDto } from 'src/users/dto/refresh-token.dto';
-
 
 @ApiTags('auth')
 @Controller('auth')
@@ -56,11 +68,15 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Gera um novo par de tokens usando o refresh token' })
+  @ApiOperation({
+    summary: 'Gera um novo par de tokens usando o refresh token',
+  })
   @ApiResponse({ status: 200, description: 'Tokens renovados com sucesso' })
-  @ApiResponse({ status: 401, description: 'Refresh token inválido ou expirado' })
+  @ApiResponse({
+    status: 401,
+    description: 'Refresh token inválido ou expirado',
+  })
   refreshTokens(@Body() dto: RefreshTokenDto) {
     return this.authService.refreshTokens(dto.refreshToken);
   }
-
 }
